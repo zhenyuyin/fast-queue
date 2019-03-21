@@ -1,1 +1,1 @@
-# gaea-fast-queue
+# fast-queue
