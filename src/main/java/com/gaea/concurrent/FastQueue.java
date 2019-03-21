@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.locks.LockSupport;
 
 /**
  * 
@@ -14,7 +13,6 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class FastQueue<T> extends AbstractQueue<T> {
 	public static final int MAX_SIZE = 1 << 30;
-	protected static final int TRY_NUM = 100;
 
 	protected final ShardRingBuffer<T> buffer;
 	protected final int capacity;
@@ -48,26 +46,14 @@ public class FastQueue<T> extends AbstractQueue<T> {
 	public boolean offer(final T t) {
 		checkNotNull(t);
 		long next;
-		int tryNum = TRY_NUM;
 
-		while (true) {
+		do {
 			next = head.get();
-			if (buffer.get(next) != null) {
-				if (head.get() != next) {
-					continue; // 并发 重试
-				}
-				// 队列满了
-				if (--tryNum != 0) {
-					LockSupport.parkNanos(1); // 自旋重试tryNum次
-				} else {
-					return false; // try结束,offer失败
-				}
-			} else {
-				if (head.compareAndSet(next, next + 1)) {
-					break;
-				}
+			if (buffer.get(next) != null && head.get() == next) {
+				return false;
 			}
-		}
+		} while (!head.compareAndSet(next, next + 1));
+		
 		buffer.put(next, t);
 		return true;
 	}
