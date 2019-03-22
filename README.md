@@ -1,4 +1,4 @@
-# fast-queue
+# Fast-Queue
 
 1.使用更轻量级的原子操作代替锁,减少锁开销
 
